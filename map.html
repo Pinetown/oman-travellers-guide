@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oman - Map Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#cfe6f5; --ground2:#e6f3fb; --card:#ffffff; --ink:#0f2230; --muted:#5c7486;
+    --line:#cfe0ec; --sea:#0e6ba8; --sea-dk:#0b5480; --gold:#c8a24a; --ok:#1f8a5b; --bad:#c0392b;
+    --serif:'Cormorant Garamond',Georgia,serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;overflow:hidden}
+  #map{position:absolute;inset:0;background:var(--ground2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        box-shadow:0 12px 34px rgba(12,44,68,.16)}
+
+  /* top bar */
+  #top{position:absolute;z-index:20;top:14px;left:50%;transform:translateX(-50%);
+       display:flex;align-items:center;gap:12px;padding:9px 16px;max-width:calc(100% - 28px)}
+  #top h1{font-family:var(--serif);font-weight:400;font-size:23px;margin:0;letter-spacing:.05em}
+  #top a{color:var(--sea);text-decoration:none;font-size:13px;white-space:nowrap}
+  #top a:hover{text-decoration:underline}
+  #top .sep{width:1px;height:18px;background:var(--line)}
+  #top .hint{color:var(--muted);font-size:12px;white-space:nowrap}
+  .dot{width:9px;height:9px;border-radius:50%;background:#b9c9d4;flex:none}
+  .dot.live{background:var(--ok)} .dot.part{background:var(--gold)} .dot.dead{background:var(--bad)}
+
+  /* search */
+  .sug{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:#fff;border:1px solid var(--line);
+       border-radius:10px;box-shadow:0 10px 24px rgba(12,44,68,.18);overflow:hidden;z-index:30}
+  .sug button{display:block;width:100%;text-align:left;padding:9px 12px;border:0;background:#fff;
+              font:inherit;color:var(--ink);cursor:pointer}
+  .sug button:hover{background:#eef7fd}
+  .sug small{color:var(--muted)}
+  .rel{position:relative}
+  /* panel */
+  #panel{position:absolute;z-index:20;top:14px;left:14px;width:336px;max-height:calc(100% - 28px);
+         overflow:auto;padding:14px}
+  #panel.hidden{display:none}
+  .block{margin-bottom:15px;position:relative}
+  .rowlbl{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font:inherit;
+        background:#fbfdff;color:var(--ink);margin-bottom:7px}
+  input:focus{outline:2px solid #bfe0f5;border-color:#9ccbe8}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .chip{border:1px solid var(--line);background:#fff;color:inherit;border-radius:99px;padding:5px 11px;
+        font:inherit;font-size:12px;cursor:pointer}
+  .chip:hover{background:#eef7fd}
+  .chip.on{background:var(--sea);border-color:var(--sea);color:#fff}
+  .list{list-style:none;margin:0;padding:0}
+  .list li{border-top:1px solid var(--line)}
+  .list li:first-child{border-top:0}
+  .list button{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 4px;
+               font:inherit;color:inherit;cursor:pointer}
+  .list button:hover{background:#eef7fd}
+  .list b{font-weight:500}
+  .list small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+  .btn{border:1px solid var(--sea);background:var(--sea);color:#fff;border-radius:9px;padding:8px 13px;
+       font:inherit;cursor:pointer}
+  .btn:hover{background:var(--sea-dk)}
+  .btn.ghost{background:#fff;color:var(--sea)}
+  .btnrow{display:flex;gap:8px;margin-bottom:8px}
+  .route{font-size:12.5px}
+  .route .sum{border-left:3px solid var(--gold);padding:6px 0 6px 9px;margin-bottom:6px}
+  .route ol{margin:6px 0 0 16px;padding:0;color:var(--muted)}
+  .route li{margin-bottom:4px}
+  .spot{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .svc{font-size:12px;line-height:1.75}
+  .svc .y{color:var(--ok)} .svc .n{color:var(--bad)} .svc .u{color:var(--muted)}
+  #tools{position:absolute;z-index:20;right:14px;bottom:14px;display:flex;align-items:center;gap:6px;
+         padding:7px 9px}
+  .tool{border:0;background:#fff;color:var(--ink);border-radius:9px;padding:7px 11px;font:inherit;
+        font-size:12.5px;cursor:pointer}
+  .tool:hover{background:#eef7fd}
+  .tool.on{background:var(--ink);color:#fff}
+  .vsep{width:1px;height:18px;background:var(--line)}
+  #note{position:absolute;z-index:30;left:50%;transform:translateX(-50%);bottom:22px;
+        max-width:min(580px,calc(100% - 28px));padding:11px 15px;font-size:13px;line-height:1.5}
+  #note b{font-weight:500}
+  @media(max-width:820px){
+    #panel{width:calc(100% - 28px);max-height:54%;top:64px}
+    #top{left:8px;transform:none;flex-wrap:wrap;gap:10px;padding:9px 13px}
+    #top .hint{display:none}
+    #tools{bottom:14px;top:auto;right:14px;flex-wrap:wrap;max-width:calc(100% - 28px)}
+  }
+</style>
+<script type='text/javascript' src='https://api2.glbgpt.com/7UCe0BC2LWb71BKtIWxVh09PphcnpDL1MucSKeXPiKa8vQ3UhCIuZH4ozww00NKWAkYdDPJYYAVhuBKnW5ye9vEGs6HdBejUCzNCg_XlkzzHrf-ranUgnjP6276BA0OW7r0pQV4AjzC3wRD7x4CdgsZnRXcrDSafVcuZkvwpWAZFRSjS2SpD4Z2yS_uPM5Dql-WHaGNhS22TEz8c-9rOM0mdUe1YOB2YGeODXmpv5xs5zicSGY9Vqh8UwePLm3vz6SWRaOK8UYKhrarPofKAg7XW1znQwDtkLgni1qy3YwvGeFI4nU3bOF5yjAM-sLutAsHFDM61PpMZ35cnhLS83W28gq15jDaq0D-Szd4X763l_EBY-KmqQ1XYnszQvNi9vVc0z5l-Ep7fLbOnHM697qXN7TqaRxSj9olw6xw2HdmVCMLjiXRNhBaoOP2U_4hSC21h7leCf9g0q9IlqhmfeZWri7EbaShHGUZLkgRvGnAR3SeivuQZzTNLnczdSs4XmEgHoZ9bIhYEUDY_JXHsgFnhTR1KByc'></script></head>
+<body>
+<div id="map"></div>
+
+<header id="top" class="card">
+  <span class="dot" id="dot" title="service status"></span>
+  <h1>Oman</h1>
+  <span class="sep"></span>
+  <a href="index.html">&larr; The guide</a>
+  <span class="hint">Drag to move &middot; scroll to zoom &middot; click anywhere to inspect it</span>
+</header>
+
+<aside id="panel" class="card">
+  <div class="block">
+    <div class="rowlbl">Search</div>
+    <div class="rel">
+      <input id="q" type="text" placeholder="Type a place &mdash; Nizwa, Wadi Bani Khalid&hellip;" autocomplete="off" />
+      <div id="sug" class="sug" hidden></div>
+    </div>
+  </div>
+
+  <div class="block">
+    <div class="rowlbl">Jump to</div>
+    <div id="chips" class="chips"></div>
+    <ul id="list" class="list"></ul>
+  </div>
+
+  <div class="block">
+    <div class="rowlbl">What&rsquo;s nearby</div>
+    <div id="nearchips" class="chips">
+      <button class="chip" data-t="restaurant">Food</button>
+      <button class="chip" data-t="lodging">Stay</button>
+      <button class="chip" data-t="gas_station">Fuel</button>
+      <button class="chip" data-t="pharmacy">Pharmacy</button>
+      <button class="chip" data-t="atm">Cash</button>
+    </div>
+    <ul id="near" class="list"></ul>
+  </div>
+
+  <div class="block">
+    <div class="rowlbl">Directions</div>
+    <input id="from" type="text" placeholder="From (empty = your location)" autocomplete="off" />
+    <input id="to" type="text" placeholder="To (or pick a place above)" autocomplete="off" />
+    <div id="modes" class="chips">
+      <button class="chip on" data-m="DRIVING">Car</button>
+      <button class="chip" data-m="WALKING">Walk</button>
+      <button class="chip" data-m="BICYCLING">Cycle</button>
+    </div>
+    <div class="btnrow">
+      <button id="go" class="btn">Show route</button>
+      <button id="clear" class="btn ghost">Clear</button>
+    </div>
+    <div id="route" class="route"></div>
+  </div>
+
+  <div class="block">
+    <div class="rowlbl">This point</div>
+    <div id="spot" class="spot">Click the map to inspect any point on it.</div>
+  </div>
+
+  <div class="block">
+    <div class="rowlbl">Services</div>
+    <div id="svc" class="svc"></div>
+  </div>
+</aside>
+
+<div id="tools" class="card">
+  <button id="btnMap" class="tool on">Map</button>
+  <button id="btnSat" class="tool">Satellite</button>
+  <span class="vsep"></span>
+  <button id="btnHome" class="tool">Reset</button>
+  <button id="btnMe" class="tool">Me</button>
+  <button id="btnPanel" class="tool">Panel</button>
+</div>
+
+<div id="note" class="card" hidden></div>
+<script>
+/* ---------- config and data ---------- */
+const KEY = "AIzaSyAwRv8Bd1OtB6OmcmJ7RoxMLGwE6QH0spg";
+const STYLE = [
+  {featureType:"water", stylers:[{color:"#a6d2ee"}]},
+  {featureType:"landscape", stylers:[{color:"#f7f3ea"}]},
+  {featureType:"road", elementType:"geometry", stylers:[{color:"#ffffff"}]},
+  {featureType:"road", elementType:"labels.text.fill", stylers:[{color:"#7b8b95"}]},
+  {featureType:"administrative", elementType:"geometry", stylers:[{color:"#cfe0ec"}]},
+  {featureType:"poi", elementType:"labels", stylers:[{visibility:"off"}]},
+  {featureType:"transit", stylers:[{visibility:"off"}]}
+];
+const PLACES = [
+ {n:"Muscat", lat:23.6124, lng:58.5938, c:"Capital", d:"the start of everything",
+  t:"The capital: Mutrah's corniche and souq, the Grand Mosque, Old Muscat and its forts."},
+ {n:"Nizwa", lat:22.9324, lng:57.5311, c:"Towns & forts", d:"160 km &middot; 1&frac34; h from Muscat",
+  t:"Fort and souq town below the mountains; the Friday livestock market is the sight."},
+ {n:"Bahla", lat:22.9985, lng:57.3168, c:"Towns & forts", d:"200 km &middot; 2&frac14; h",
+  t:"UNESCO mud-brick fort, pottery workshops, and Jabrin castle a short drive away."},
+ {n:"Jebel Shams", lat:23.2374, lng:57.2638, c:"Mountains", d:"230 km &middot; 3&frac12; h",
+  t:"Oman's highest mountain, above Wadi Ghul - the 'Grand Canyon' of Arabia."},
+ {n:"Jebel Akhdar", lat:23.2697, lng:57.3696, c:"Mountains", d:"170 km &middot; 2&frac12; h",
+  t:"The green mountain: rose terraces, cliff villages, and a 4WD checkpoint."},
+ {n:"Wahiba Sands", lat:22.1378, lng:58.7925, c:"Desert", d:"200 km &middot; 2&frac12; h",
+  t:"The dunes, entered near Bidiyah; camps and camel treks, deep sand only with 4WD."},
+ {n:"Wadi Bani Khalid", lat:22.1762, lng:59.2141, c:"Wadis", d:"230 km &middot; 2&frac34; h",
+  t:"Turquoise pools and palms - never go in when rain is forecast upstream."},
+ {n:"Sur", lat:22.5693, lng:59.5296, c:"Coast", d:"200 km &middot; 2&frac12; h",
+  t:"The dhow boatyard, the lighthouse across the bay, turtles at Ras Al Jinz."},
+ {n:"Salalah", lat:17.0175, lng:54.1011, c:"South", d:"1,000 km &middot; fly it",
+  t:"Dhofar: khareef drizzle mid-summer, frankincense country, blowholes and beaches."},
+ {n:"Khasab", lat:26.1841, lng:56.2470, c:"North", d:"550 km &middot; 6 h plus the UAE border",
+  t:"Musandam's fjord coast: dhow cruises through the khors, dolphins, Telegraph Island."}
+];
+const CATS = ["All","Capital","Towns & forts","Mountains","Desert","Wadis","Coast","South","North"];
+const CENTRE = {lat:21.3, lng:57.2};
+
+/* ---------- shared bits ---------- */
+let map, info, dirSvc, dirRen, placesSvc, geocoder, autoSvc, elevSvc, mode = "DRIVING";
+let markers = [], active = null, filter = "All";
+const S = {auto:"?", dir:"?", places:"?", geo:"?", elev:"?"};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+function say(html, sticky){
+  const n = $("note"); n.hidden = false; n.innerHTML = html;
+  clearTimeout(say.t); if(!sticky) say.t = setTimeout(() => { n.hidden = true; }, 16000);
+}
+function ping(key, ok){ S[key] = ok ? "y" : "n"; paintServices(); }
+function paintServices(){
+  const label = {auto:"Search (autocomplete)", dir:"Directions", places:"Places nearby",
+                 geo:"Address lookup", elev:"Elevation"};
+  let live = 0, dead = 0;
+  $("svc").innerHTML = Object.keys(S).map(k => {
+    const v = S[k], cls = v === "y" ? "y" : v === "n" ? "n" : "u";
+    const txt = v === "y" ? "working" : v === "n" ? "not allowed on this key" : "not used yet";
+    if(v === "y") live++; if(v === "n") dead++;
+    return "<div><span class='" + cls + "'>&#9679;</span> " + label[k] + " &mdash; " + txt + "</div>";
+  }).join("");
+  const dot = $("dot");
+  dot.className = "dot " + (dead && !live ? "dead" : dead ? "part" : "live");
+}
+/* ---------- the list of places ---------- */
+function buildChips(){
+  $("chips").innerHTML = CATS.map(c =>
+    "<button class='chip" + (c === filter ? " on" : "") + "' data-c='" + esc(c) + "'>" + esc(c) + "</button>").join("");
+  $("chips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    filter = b.dataset.c; buildChips(); buildList();
+  });
+}
+function buildList(){
+  const rows = PLACES.filter(p => filter === "All" || p.c === filter);
+  $("list").innerHTML = rows.map(p =>
+    "<li><button data-i='" + PLACES.indexOf(p) + "'><b>" + esc(p.n) + "</b><small>" + esc(p.c) +
+    " &middot; " + p.d + "</small></button></li>").join("");
+  $("list").querySelectorAll("button").forEach(b => b.onclick = () => goTo(+b.dataset.i));
+}
+function goTo(i){
+  const p = PLACES[i];
+  map.panTo({lat:p.lat, lng:p.lng}); map.setZoom(11); openInfo(i);
+}
+function openInfo(i){
+  const p = PLACES[i]; active = i; if(!markers[i]) return;
+  info.setContent(
+    "<div style='font-family:Inter,system-ui,sans-serif;max-width:252px'>" +
+    "<div style='font-family:Cormorant Garamond,Georgia,serif;font-size:20px'>" + esc(p.n) + "</div>" +
+    "<div style='color:#5c7486;font-size:12px;margin:2px 0 7px'>" + esc(p.c) + " &middot; " + p.d + "</div>" +
+    "<div style='font-size:13px;line-height:1.5'>" + p.t + "</div>" +
+    "<div style='margin-top:9px;font-size:12.5px'><a href='#' onclick='setTo(" + i +
+    ");return false'>Directions to here</a> &middot; <a target='_blank' rel='noopener' href='" +
+    "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + p.lat + "," + p.lng +
+    "'>Street View &#8599;</a></div></div>");
+  info.open(map, markers[i]);
+}
+function setTo(i){
+  $("to").value = PLACES[i].n; active = i;
+  say("Destination set to <b>" + esc(PLACES[i].n) + "</b> &mdash; now press <b>Show route</b>.", false);
+}
+
+/* ---------- search ---------- */
+function wireSearch(){
+  const inp = $("q"), box = $("sug");
+  let t = null;
+  inp.oninput = () => {
+    const q = inp.value.trim(); box.hidden = true;
+    if(q.length < 2) return;
+    const local = PLACES.filter(p => p.n.toLowerCase().indexOf(q.toLowerCase()) > -1);
+    clearTimeout(t);
+    t = setTimeout(() => {
+      if(!autoSvc){ showLocal(local, box); return; }
+      autoSvc.getPlacePredictions({input:q, componentRestrictions:{country:"om"}}, (preds, st) => {
+        if(st === "OK" && preds && preds.length){ ping("auto", true); showPreds(preds.slice(0,6), box); }
+        else { ping("auto", false); showLocal(local, box); }
+      });
+    }, 240);
+  };
+}
+function showLocal(local, box){
+  if(!local.length){ say("Nothing matched in the guide's own list of ten places. Search needs the <b>Places API</b> allowed on your key.", false); return; }
+  box.innerHTML = local.map(p => "<button data-i='" + PLACES.indexOf(p) + "'>" + esc(p.n) +
+    " <small>" + esc(p.c) + "</small></button>").join("");
+  box.hidden = false;
+  box.querySelectorAll("button").forEach(b => b.onclick = () => { box.hidden = true; $("q").value = ""; goTo(+b.dataset.i); });
+}
+function showPreds(preds, box){
+  box.innerHTML = preds.map(p => "<button data-p='" + esc(p.place_id) + "'>" + esc(p.structured_formatting.main_text) +
+    " <small>" + esc(p.structured_formatting.secondary_text || "") + "</small></button>").join("");
+  box.hidden = false;
+  box.querySelectorAll("button").forEach(b => b.onclick = () => {
+    box.hidden = true;
+    if(placesSvc && b.dataset.p){
+      placesSvc.getDetails({placeId:b.dataset.p, fields:["name","geometry","formatted_address"]}, (pl, st) => {
+        if(st === "OK" && pl && pl.geometry){ ping("places", true); land(pl.geometry.location, pl.name); }
+        else { ping("places", false); lookupByName(b.textContent.trim(), true); }
+      });
+    } else lookupByName(b.textContent.trim(), true);
+  });
+}
+function lookupByName(name, clearBox){
+  if(!geocoder){ say("Address lookup needs the <b>Geocoding API</b> allowed on your key.", false); return; }
+  geocoder.geocode({address:name, componentRestrictions:{country:"OM"}}, (res, st) => {
+    if(st === "OK" && res && res.length){ ping("geo", true); land(res[0].geometry.location, res[0].formatted_address); }
+    else { ping("geo", false); say("Google could not place <b>" + esc(name) + "</b>.", false); }
+  });
+}
+function land(pos, label){
+  map.panTo(pos); map.setZoom(13);
+  $("spot").innerHTML = "<b>" + esc(label) + "</b><br>" + pos.lat().toFixed(4) + ", " + pos.lng().toFixed(4);
+  say("Centred on <b>" + esc(label) + "</b>.", false);
+}
+/* ---------- directions ---------- */
+function wireDirections(){
+  $("modes").querySelectorAll("button").forEach(b => b.onclick = () => {
+    mode = b.dataset.m;
+    $("modes").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  });
+  $("go").onclick = runRoute;
+  $("clear").onclick = clearRoute;
+}
+function gmapsLink(){
+  const to = $("to").value.trim() || "Oman", from = $("from").value.trim();
+  return "https://www.google.com/maps/dir/?api=1" + (from ? "&origin=" + encodeURIComponent(from) : "") +
+         "&destination=" + encodeURIComponent(to) + "&travelmode=" + mode.toLowerCase();
+}
+function runRoute(){
+  const to = $("to").value.trim(), from = $("from").value.trim();
+  if(!to){
+    say("Give me a destination &mdash; type one, or open a place on the map and press <b>Directions to here</b>.", false);
+    return;
+  }
+  if(!dirSvc){
+    ping("dir", false);
+    say("Directions need the <b>Directions API</b> allowed on this key. You can still " +
+        "<a target='_blank' rel='noopener' href='" + gmapsLink() + "'>open the route in Google Maps</a>.", false);
+    return;
+  }
+  const req = {destination:to, travelMode:google.maps.TravelMode[mode], provideRouteAlternatives:true};
+  if(from){ req.origin = from; dirSvc.route(req, drawRoute); return; }
+  if(navigator.geolocation){
+    say("Finding where you are&hellip;", false);
+    navigator.geolocation.getCurrentPosition(
+      p => { req.origin = {lat:p.coords.latitude, lng:p.coords.longitude}; dirSvc.route(req, drawRoute); },
+      () => { req.origin = "Muscat, Oman"; dirSvc.route(req, drawRoute); }, {timeout:8000});
+  } else { req.origin = "Muscat, Oman"; dirSvc.route(req, drawRoute); }
+}
+function drawRoute(res, st){
+  if(st !== "OK" || !res || !res.routes || !res.routes.length){
+    ping("dir", false);
+    say("No route came back (" + st + "). That is what it looks like when the <b>Directions API</b> is not " +
+        "allowed on your key. <a target='_blank' rel='noopener' href='" + gmapsLink() + "'>Open it in Google Maps instead</a>.", false);
+    return;
+  }
+  ping("dir", true);
+  dirRen.setDirections(res);
+  const leg = res.routes[0].legs[0], strip = s => String(s).replace(/<[^>]+>/g, " ");
+  $("route").innerHTML =
+    "<div class='sum'><b>" + esc(strip(leg.start_address).split(",")[0]) + "</b> &rarr; <b>" +
+    esc(strip(leg.end_address).split(",")[0]) + "</b><br>" + leg.distance.text + " &middot; about " +
+    leg.duration.text + " by " + mode.toLowerCase() + "</div>" +
+    "<ol>" + leg.steps.slice(0, 8).map(s =>
+      "<li>" + esc(strip(s.instructions)) + " <span style='color:#93a7b3'>" + s.distance.text + "</span></li>").join("") +
+    "</ol><div style='margin-top:9px'><a target='_blank' rel='noopener' href='" + gmapsLink() +
+    "'>Open in Google Maps &#8599;</a></div>";
+  $("route").scrollIntoView({block:"nearest"});
+}
+function clearRoute(){
+  if(dirRen) dirRen.setDirections({routes:[]});
+  $("route").innerHTML = ""; $("to").value = ""; $("from").value = "";
+}
+
+/* ---------- what is nearby ---------- */
+function wireNearby(){
+  $("nearchips").querySelectorAll("button").forEach(b => b.onclick = () => {
+    $("nearchips").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+    if(!placesSvc){
+      ping("places", false);
+      say("Nearby search needs the <b>Places API</b> allowed on your key.", false);
+      return;
+    }
+    placesSvc.nearbySearch({location:map.getCenter(), radius:4000, type:b.dataset.t}, (res, st) => {
+      if(st !== "OK" || !res || !res.length){
+        ping("places", false);
+        $("near").innerHTML = "<li><button>Nothing found within 4 km &mdash; or the service was refused.</button></li>";
+        return;
+      }
+      ping("places", true);
+      $("near").innerHTML = res.slice(0, 7).map(p =>
+        "<li><button data-lat='" + p.geometry.location.lat() + "' data-lng='" + p.geometry.location.lng() +
+        "'><b>" + esc(p.name) + "</b><small>" + esc(p.vicinity || "") +
+        (p.rating ? " &middot; " + p.rating + "&#9733;" : "") + "</small></button></li>").join("");
+      $("near").querySelectorAll("button").forEach(x => x.onclick = () => {
+        map.panTo({lat:+x.dataset.lat, lng:+x.dataset.lng}); map.setZoom(15);
+      });
+    });
+  });
+}
+/* ---------- the buttons ---------- */
+function tog(on, off){ $(on).classList.add("on"); $(off).classList.remove("on"); }
+function wireTools(){
+  $("btnMap").onclick = () => { map.setMapTypeId("roadmap"); tog("btnMap", "btnSat"); };
+  $("btnSat").onclick = () => { map.setMapTypeId("hybrid"); tog("btnSat", "btnMap"); };
+  $("btnHome").onclick = () => { clearRoute(); map.setCenter(CENTRE); map.setZoom(6); };
+  $("btnMe").onclick = () => {
+    if(!navigator.geolocation){ say("This browser will not share your location.", false); return; }
+    navigator.geolocation.getCurrentPosition(p => {
+      const pos = {lat:p.coords.latitude, lng:p.coords.longitude};
+      map.panTo(pos); map.setZoom(12);
+      new google.maps.Marker({position:pos, map:map, title:"You are here"});
+    }, () => say("Your browser would not give up your location.", false));
+  };
+  $("btnPanel").onclick = () => $("panel").classList.toggle("hidden");
+}
+
+/* ---------- click anywhere to inspect that point ---------- */
+function inspect(e){
+  const pos = {lat:e.latLng.lat(), lng:e.latLng.lng()};
+  const head = "<b>" + pos.lat.toFixed(4) + ", " + pos.lng.toFixed(4) + "</b>";
+  $("spot").innerHTML = head + "<br>looking it up&hellip;";
+  new google.maps.Marker({position:pos, map:map});
+  if(!geocoder){ $("spot").innerHTML = head; return; }
+  geocoder.geocode({location:pos}, (res, st) => {
+    ping("geo", st === "OK" && res && res.length > 0);
+    const name = (st === "OK" && res && res.length) ? res[0].formatted_address : "no address found for this point";
+    $("spot").innerHTML = head + "<br>" + esc(name) +
+      "<br><span style='font-size:11.5px'><a target='_blank' rel='noopener' href='" +
+      "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + pos.lat + "," + pos.lng +
+      "'>Street view here &#8599;</a></span>";
+    if(elevSvc){
+      elevSvc.getElevationForLocations({locations:[pos]}, (r, s2) => {
+        ping("elev", s2 === "OK");
+        if(s2 === "OK" && r && r.length)
+          $("spot").innerHTML += "<br><span style='font-size:11.5px'>Elevation about " +
+            Math.round(r[0].elevation) + " m</span>";
+      });
+    }
+  });
+}
+
+/* ---------- start it up ---------- */
+function init(){
+  map = new google.maps.Map($("map"), {
+    center: CENTRE, zoom: 6, styles: STYLE, mapTypeId: "roadmap",
+    streetViewControl: true, fullscreenControl: true, scaleControl: true,
+    mapTypeControl: false, clickableIcons: false, gestureHandling: "greedy"
+  });
+  info = new google.maps.InfoWindow();
+  dirSvc = new google.maps.DirectionsService();
+  dirRen = new google.maps.DirectionsRenderer({map:map,
+    polylineOptions:{strokeColor:"#0e6ba8", strokeWeight:5, strokeOpacity:.85}});
+  if(google.maps.places){
+    placesSvc = new google.maps.places.PlacesService(map);
+    autoSvc = new google.maps.places.AutocompleteService();
+  }
+  if(google.maps.Geocoder) geocoder = new google.maps.Geocoder();
+  if(google.maps.ElevationService) elevSvc = new google.maps.ElevationService();
+  PLACES.forEach((p, i) => {
+    markers[i] = new google.maps.Marker({position:{lat:p.lat, lng:p.lng}, map:map, title:p.n});
+    markers[i].addListener("click", () => openInfo(i));
+  });
+  map.addListener("click", inspect);
+  buildChips(); buildList(); wireSearch(); wireDirections(); wireNearby(); wireTools(); paintServices();
+  say("The ten places from the guide are pinned. Search, directions and what&rsquo;s-nearby come alive as your " +
+      "key allows them &mdash; the Services list in the panel shows which are working.", false);
+}
+function failed(){
+  say("The map itself did not load. That usually means the <b>Maps JavaScript API</b> is not allowed for the " +
+      "address this page is served from &mdash; worth checking the key&rsquo;s website restrictions.", true);
+}
+window.gm_authFailure = failed;
+setTimeout(() => { if(!window.map) failed(); }, 10000);
+</script>
+
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAwRv8Bd1OtB6OmcmJ7RoxMLGwE6QH0spg&libraries=places,geometry&callback=init">
+</script>
+</body>
+</html>
